@@ -27,10 +27,7 @@ class Application(tk.Tk):
             self.last_used_text = self.get_default_text()
 
     def save_config(self):
-        config = {
-            'last_working_dir': self.last_working_dir,
-            'last_used_text': self.textarea.get("1.0", tk.END)
-        }
+        config = {'last_working_dir': self.last_working_dir, 'last_used_text': self.textarea.get("1.0", tk.END)}
         with open('config.json', 'w') as f:
             json.dump(config, f)
 
@@ -81,9 +78,7 @@ class Application(tk.Tk):
     def insert_node(self, parent, path, lazy_load=False):
         if not os.path.basename(path).startswith('.'):
             text = os.path.basename(path) if os.path.basename(path) else path
-            checked_state = "[ ]"
-            node = self.tree.insert(parent, 'end', text=text, values=(checked_state,), open=False)
-            self.tree.set(node, 'checked', checked_state)
+            node = self.tree.insert(parent, 'end', text=text, values=('[ ]',), open=False)
             self.node_paths[node] = path
             if os.path.isdir(path) and lazy_load:
                 self.tree.insert(node, 'end', text='dummy')
@@ -103,16 +98,11 @@ class Application(tk.Tk):
         try:
             for item in sorted(os.listdir(path)):
                 item_path = os.path.join(path, item)
-                if not item.startswith('.') and (os.path.isdir(item_path) or self.is_text_file(item_path)):
-                    if item_path not in self.node_paths.values():  # Avoid adding duplicate nodes
+                if not item.startswith('.') and (os.path.isdir(item_path) or os.path.isfile(item_path)):
+                    if item_path not in self.node_paths.values():
                         self.insert_node(parent, item_path, lazy_load=True)
         except PermissionError:
             pass
-
-    def is_text_file(self, path):
-        # Check if the file is a text file or a code file by its extension
-        text_file_extensions = ['.txt', '.py', '.java', '.js', '.html', '.css', '.md', '.json', '.xml', '.csv', '.yaml', '.yml', '.cpp', '.h', '.c', '.sh']
-        return os.path.isfile(path) and any(path.lower().endswith(ext) for ext in text_file_extensions)
 
     def on_tree_right_click(self, event):
         item_id = self.tree.identify_row(event.y)
@@ -132,9 +122,9 @@ class Application(tk.Tk):
             try:
                 if platform.system() == "Windows":
                     os.startfile(path)
-                elif platform.system() == "Darwin":  # macOS
+                elif platform.system() == "Darwin":
                     subprocess.Popen(["open", path])
-                else:  # Linux and others
+                else:
                     subprocess.Popen(["xdg-open", path])
             except Exception as e:
                 messagebox.showerror("Error", f"Could not open the directory: {e}")
@@ -142,8 +132,7 @@ class Application(tk.Tk):
     def toggle_selection(self, item_id):
         if item_id not in self.node_paths:
             return
-        current_state = self.tree.set(item_id, 'checked')
-        new_state = '[x]' if current_state == '[ ]' else '[ ]'
+        new_state = '[x]' if self.tree.set(item_id, 'checked') == '[ ]' else '[ ]'
         self.tree.set(item_id, 'checked', new_state)
         path = self.node_paths[item_id]
         if os.path.isdir(path):
@@ -192,7 +181,7 @@ class Application(tk.Tk):
         for child in self.tree.get_children(parent):
             if child in self.node_paths and self.tree.set(child, 'checked') == '[x]':
                 path = self.node_paths[child]
-                if os.path.isfile(path) and self.is_text_file(path):
+                if os.path.isfile(path):
                     selected_files.append(path)
                 elif os.path.isdir(path):
                     self.collect_files_in_directory(path, selected_files)
@@ -201,10 +190,9 @@ class Application(tk.Tk):
     def collect_files_in_directory(self, directory, selected_files):
         for root, _, files in os.walk(directory):
             for file in files:
-                if not file.startswith('.'):  # Skip hidden files
+                if not file.startswith('.'):
                     file_path = os.path.join(root, file)
-                    if self.is_text_file(file_path):
-                        selected_files.append(file_path)
+                    selected_files.append(file_path)
 
 if __name__ == "__main__":
     app = Application()
